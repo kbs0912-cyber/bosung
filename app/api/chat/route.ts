@@ -65,6 +65,12 @@ export async function POST(req: NextRequest) {
       );
     }
     if (error instanceof Anthropic.APIError) {
+      if (error.status === 400 && /credit balance/i.test(error.message)) {
+        return NextResponse.json(
+          { error: "Anthropic 계정의 크레딧 잔액이 부족합니다. Plans & Billing에서 충전 후 다시 시도해주세요." },
+          { status: 502 },
+        );
+      }
       return NextResponse.json(
         { error: "AI 응답 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요." },
         { status: 502 },
