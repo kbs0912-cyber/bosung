@@ -32,8 +32,13 @@ export const OUTPUT_POST_TOOL: Anthropic.Tool = {
 // Capped to a single search — each round-trip adds its own cost plus the
 // fetched page content as input tokens, and one well-formed query already
 // gives 1단계 enough to work with for a short blog post.
+// allowed_callers: ["direct"] is required — web_search_20260209 defaults to
+// calling through code execution (dynamic filtering), which Haiku models
+// don't support (400 "does not support programmatic tool calling"). Direct
+// calls work on every model, Haiku included.
 export const WEB_SEARCH_TOOL = {
   type: "web_search_20260209",
   name: "web_search",
   max_uses: 1,
+  allowed_callers: ["direct"],
 } as unknown as Anthropic.Tool;
