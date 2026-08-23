@@ -112,7 +112,17 @@ export async function POST(req: NextRequest) {
     const response = await anthropic.messages.create({
       model: getModel(),
       max_tokens: 16000,
-      system: getCategorySystemPrompt(category.promptFile),
+      // Cached: the per-category guide is 5~7만자 and byte-identical across
+      // every action (제목 다시 만들기, 톤 조절, ...) within a category, so
+      // caching it cuts repeat-click cost drastically (~90% off cached
+      // input tokens instead of full price every time).
+      system: [
+        {
+          type: "text",
+          text: getCategorySystemPrompt(category.promptFile),
+          cache_control: { type: "ephemeral" },
+        },
+      ],
       tools: [WEB_SEARCH_TOOL, OUTPUT_POST_TOOL],
       tool_choice: { type: "auto" },
       messages: [{ role: "user", content: buildUserMessage(requestBody) }],
