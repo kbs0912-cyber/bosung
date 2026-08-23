@@ -3,6 +3,7 @@ import {
   DEFAULT_MODEL,
   getModelId,
   isApiKeyManagedByEnv,
+  isGeminiApiKeyManagedByEnv,
   readConfig,
   writeConfig,
 } from "@/lib/config";
@@ -11,6 +12,7 @@ export const runtime = "nodejs"; // needs fs — do not use edge runtime
 
 export async function GET() {
   const managedByEnv = isApiKeyManagedByEnv();
+  const geminiManagedByEnv = isGeminiApiKeyManagedByEnv();
   const fileConfig = readConfig();
 
   return NextResponse.json({
@@ -18,21 +20,19 @@ export async function GET() {
     managedByEnv,
     modelId: getModelId(),
     defaultModel: DEFAULT_MODEL,
+    hasGeminiApiKey: geminiManagedByEnv || Boolean(fileConfig.geminiApiKey),
+    geminiManagedByEnv,
   });
 }
 
 export async function POST(req: NextRequest) {
-  if (isApiKeyManagedByEnv()) {
-    return NextResponse.json(
-      {
-        error:
-          "서버 환경변수(ANTHROPIC_API_KEY)로 이미 설정되어 있어 앱에서 변경할 수 없습니다.",
-      },
-      { status: 409 },
-    );
-  }
-
-  let body: { apiKey?: string; modelId?: string; clearApiKey?: boolean };
+  let body: {
+    apiKey?: string;
+    clearApiKey?: boolean;
+    modelId?: string;
+    geminiApiKey?: string;
+    clearGeminiApiKey?: boolean;
+  };
   try {
     body = await req.json();
   } catch {
@@ -41,15 +41,37 @@ export async function POST(req: NextRequest) {
 
   const current = readConfig();
   const next = { ...current };
+  const errors: string[] = [];
 
-  if (body.clearApiKey) {
-    next.apiKey = undefined;
-  } else if (typeof body.apiKey === "string" && body.apiKey.trim()) {
-    next.apiKey = body.apiKey.trim();
+  if (body.clearApiKey || (typeof body.apiKey === "string" && body.apiKey.trim())) {
+    if (isApiKeyManagedByEnv()) {
+      errors.push("Anthropic API 키는 서버 환경변수로 고정되어 있어 앱에서 변경할 수 없습니다.");
+    } else if (body.clearApiKey) {
+      next.apiKey = undefined;
+    } else if (typeof body.apiKey === "string") {
+      next.apiKey = body.apiKey.trim();
+    }
   }
 
   if (typeof body.modelId === "string") {
     next.modelId = body.modelId.trim() || undefined;
+  }
+
+  if (
+    body.clearGeminiApiKey ||
+    (typeof body.geminiApiKey === "string" && body.geminiApiKey.trim())
+  ) {
+    if (isGeminiApiKeyManagedByEnv()) {
+      errors.push("Gemini API 키는 서버 환경변수로 고정되어 있어 앱에서 변경할 수 없습니다.");
+    } else if (body.clearGeminiApiKey) {
+      next.geminiApiKey = undefined;
+    } else if (typeof body.geminiApiKey === "string") {
+      next.geminiApiKey = body.geminiApiKey.trim();
+    }
+  }
+
+  if (errors.length > 0) {
+    return NextResponse.json({ error: errors.join(" ") }, { status: 409 });
   }
 
   try {

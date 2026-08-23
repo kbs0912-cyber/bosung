@@ -9,6 +9,15 @@ import SettingsModal from "@/components/SettingsModal";
 import { CATEGORIES } from "@/lib/categories";
 import type { GenerateAction, HomepanPost } from "@/lib/types";
 
+// Actions whose result carries a new 메인 썸네일 프롬프트 — only these should
+// trigger a fresh image generation. Tone/length tweaks keep the same prompt
+// (see lib/actions.ts), so the existing image stays valid.
+const THUMBNAIL_CHANGING_ACTIONS: GenerateAction[] = [
+  "generate",
+  "regenerate_all",
+  "regenerate_thumbnail",
+];
+
 export default function ContentStudio() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [keyword, setKeyword] = useState("");
@@ -18,7 +27,35 @@ export default function ContentStudio() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [customPromptContents, setCustomPromptContents] = useState<string[]>([]);
 
+  const [thumbnailImage, setThumbnailImage] = useState<string | null>(null);
+  const [imageLoading, setImageLoading] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+
   const loading = loadingAction !== null;
+
+  async function generateImage(prompt: string) {
+    setImageLoading(true);
+    setImageError(null);
+    try {
+      const res = await fetch("/api/generate-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setImageError(data.error ?? "이미지 생성에 실패했습니다.");
+        setThumbnailImage(null);
+        return;
+      }
+      setThumbnailImage(data.imageDataUrl as string);
+    } catch {
+      setImageError("네트워크 오류로 이미지를 받지 못했습니다.");
+      setThumbnailImage(null);
+    } finally {
+      setImageLoading(false);
+    }
+  }
 
   async function runAction(action: GenerateAction) {
     if (!keyword.trim()) {
@@ -46,7 +83,11 @@ export default function ContentStudio() {
         setErrorMsg(data.error ?? "콘텐츠 생성 중 오류가 발생했습니다.");
         return;
       }
-      setPkg(data.post as HomepanPost);
+      const post = data.post as HomepanPost;
+      setPkg(post);
+      if (THUMBNAIL_CHANGING_ACTIONS.includes(action)) {
+        void generateImage(post.mainThumbnailPrompt);
+      }
     } catch {
       setErrorMsg("네트워크 오류로 콘텐츠를 받지 못했습니다. 잠시 후 다시 시도해주세요.");
     } finally {
@@ -57,6 +98,8 @@ export default function ContentStudio() {
   function handleReset() {
     setPkg(null);
     setErrorMsg(null);
+    setThumbnailImage(null);
+    setImageError(null);
   }
 
   return (
@@ -76,7 +119,7 @@ export default function ContentStudio() {
           주제어 하나로 홈판용 글 완성
         </h1>
         <p className="mt-2 text-sm text-zinc-500 sm:text-base">
-          실시간 검색과 팩트체크를 거쳐, 바로 붙여넣을 수 있는 완성글과 대표 썸네일 프롬프트를 만들어드립니다.
+          실시간 검색과 팩트체크를 거쳐, 바로 붙여넣을 수 있는 완성글과 대표 썸네일 이미지를 만들어드립니다.
         </p>
       </header>
 
@@ -110,7 +153,13 @@ export default function ContentStudio() {
 
       {pkg && (
         <>
-          <ResultPackage pkg={pkg} />
+          <ResultPackage
+            pkg={pkg}
+            thumbnailImage={thumbnailImage}
+            imageLoading={imageLoading}
+            imageError={imageError}
+            onRegenerateImage={() => generateImage(pkg.mainThumbnailPrompt)}
+          />
           <ActionBar loading={loading} loadingAction={loadingAction} onAction={runAction} />
           <button
             type="button"

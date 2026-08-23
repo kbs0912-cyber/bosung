@@ -4,6 +4,7 @@ import path from "path";
 export interface AppConfig {
   apiKey?: string;
   modelId?: string;
+  geminiApiKey?: string;
 }
 
 // In the packaged Windows (Electron) app, main.js sets APP_CONFIG_DIR to the
@@ -25,6 +26,8 @@ export function readConfig(): AppConfig {
     return {
       apiKey: typeof parsed.apiKey === "string" ? parsed.apiKey : undefined,
       modelId: typeof parsed.modelId === "string" ? parsed.modelId : undefined,
+      geminiApiKey:
+        typeof parsed.geminiApiKey === "string" ? parsed.geminiApiKey : undefined,
     };
   } catch {
     return {};
@@ -38,6 +41,7 @@ export function writeConfig(config: AppConfig): void {
 }
 
 export const DEFAULT_MODEL = "claude-sonnet-5";
+export const DEFAULT_GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image";
 
 // Env var always wins (normal server deployment). Falls back to the value
 // saved from the in-app 설정 screen, used by the packaged desktop app.
@@ -54,4 +58,18 @@ export function getModelId(): string {
 // silently overridden by whoever has the app open.
 export function isApiKeyManagedByEnv(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY);
+}
+
+// Separate Google Gemini key, used only for generating the main thumbnail
+// image from the 메인 썸네일 프롬프트. Independent from the Anthropic key.
+export function getGeminiApiKey(): string | undefined {
+  return process.env.GEMINI_API_KEY || readConfig().geminiApiKey;
+}
+
+export function getGeminiImageModel(): string {
+  return process.env.GEMINI_IMAGE_MODEL_ID || DEFAULT_GEMINI_IMAGE_MODEL;
+}
+
+export function isGeminiApiKeyManagedByEnv(): boolean {
+  return Boolean(process.env.GEMINI_API_KEY);
 }
