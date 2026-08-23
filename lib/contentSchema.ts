@@ -29,10 +29,11 @@ export const OUTPUT_POST_TOOL: Anthropic.Tool = {
 // Anthropic server tool (executes on Anthropic's infrastructure — no client
 // loop needed). Lets the model actually perform the guide's 1단계 실시간
 // 검색 requirement instead of relying on memorized facts.
-// max_uses is capped low — each search round-trip adds real wall-clock time
-// on top of its own cost, and 1단계 only needs a handful of queries.
+// Capped to a single search — each round-trip adds its own cost plus the
+// fetched page content as input tokens, and one well-formed query already
+// gives 1단계 enough to work with for a short blog post.
 export const WEB_SEARCH_TOOL = {
   type: "web_search_20260209",
   name: "web_search",
-  max_uses: 3,
+  max_uses: 1,
 } as unknown as Anthropic.Tool;
