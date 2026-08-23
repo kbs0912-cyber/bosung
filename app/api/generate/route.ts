@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { getAnthropicClient, getModel } from "@/lib/anthropic";
+import { getAnthropicClient, getModel, modelSupportsEffort } from "@/lib/anthropic";
 import { getApiKey } from "@/lib/config";
 import { getCategorySystemPrompt } from "@/lib/systemPrompt";
 import { OUTPUT_POST_TOOL, WEB_SEARCH_TOOL } from "@/lib/contentSchema";
@@ -109,15 +109,15 @@ export async function POST(req: NextRequest) {
 
   try {
     const anthropic = getAnthropicClient();
+    const model = getModel();
     const response = await anthropic.messages.create({
-      model: getModel(),
+      model,
       // The final post is ~1,000~1,500자 plus a short thumbnail prompt —
       // capped well below the default to keep a runaway response cheap.
       max_tokens: 8000,
-      // Low effort trims reasoning-token spend the most. This is a writing
-      // task, not a hard reasoning problem, so the accuracy loss vs. medium
-      // is small relative to the token savings.
-      output_config: { effort: "low" },
+      // Low effort trims reasoning-token spend the most. Haiku models reject
+      // this parameter outright (400), so it's only sent for Sonnet/Opus.
+      ...(modelSupportsEffort(model) ? { output_config: { effort: "low" as const } } : {}),
       // Cached: the per-category guide is 5~7만자 and byte-identical across
       // every action (제목 다시 만들기, 톤 조절, ...) within a category, so
       // caching it cuts repeat-click cost drastically (~90% off cached

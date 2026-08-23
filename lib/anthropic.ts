@@ -11,3 +11,9 @@ export function getAnthropicClient(): Anthropic {
 export function getModel(): string {
   return getModelId();
 }
+
+// Haiku models reject output_config.effort outright (400 "This model does
+// not support the effort parameter"). Only Sonnet/Opus-tier models accept it.
+export function modelSupportsEffort(model: string): boolean {
+  return !model.toLowerCase().includes("haiku");
+}
