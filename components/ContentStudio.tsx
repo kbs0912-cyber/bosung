@@ -5,9 +5,11 @@ import GeneratorForm from "@/components/GeneratorForm";
 import ActionBar from "@/components/ActionBar";
 import ResultPackage from "@/components/ResultPackage";
 import CustomPromptManager from "@/components/CustomPromptManager";
+import SettingsModal from "@/components/SettingsModal";
 import type { Category, ContentPackage, GenerateAction, Tone } from "@/lib/types";
 
 export default function ContentStudio() {
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [category, setCategory] = useState<Category>("생활");
   const [tone, setTone] = useState<Tone>("정보형");
@@ -60,7 +62,14 @@ export default function ContentStudio() {
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 pb-16 pt-10 sm:px-6">
-      <header className="text-center">
+      <header className="relative text-center">
+        <button
+          type="button"
+          onClick={() => setSettingsOpen(true)}
+          className="absolute right-0 top-0 rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs font-medium text-zinc-500 shadow-sm transition hover:bg-zinc-50"
+        >
+          ⚙ 설정
+        </button>
         <span className="mb-3 inline-block rounded-full bg-[#03C75A]/10 px-3 py-1 text-xs font-semibold text-[#03C75A]">
           AI 딸깍 블로그
         </span>
@@ -71,6 +80,8 @@ export default function ContentStudio() {
           제목부터 본문, 이미지 프롬프트, 해시태그까지 AI가 한 번에 만들어드립니다.
         </p>
       </header>
+
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
       <GeneratorForm
         keyword={keyword}

@@ -1,17 +1,13 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { getApiKey, getModelId } from "@/lib/config";
 
-export const DEFAULT_MODEL = "claude-sonnet-5";
-export const MODEL_ID = process.env.CLAUDE_MODEL_ID || DEFAULT_MODEL;
-
-let client: Anthropic | null = null;
-
-// Lazily constructed so that importing this module never throws when
-// ANTHROPIC_API_KEY is missing — the API route checks for the key first and
-// returns a friendly error before ever calling this. Reads the key from
-// process.env automatically; never pass it from the client, never log it.
+// A new client is created per call (cheap) rather than cached, so a key
+// saved from the in-app 설정 screen takes effect immediately without
+// restarting the server.
 export function getAnthropicClient(): Anthropic {
-  if (client === null) {
-    client = new Anthropic();
-  }
-  return client;
+  return new Anthropic({ apiKey: getApiKey() });
+}
+
+export function getModel(): string {
+  return getModelId();
 }

@@ -2,11 +2,15 @@
   "name": "bosung",
   "version": "0.1.0",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "electron:dev": "concurrently -k -n next,electron \"npm:dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron:build": "cross-env ELECTRON_BUILD=1 next build",
+    "dist:win": "npm run electron:build && electron-builder --win"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
@@ -19,9 +23,41 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^9",
+    "cross-env": "^7",
+    "electron": "^33",
+    "electron-builder": "^25",
     "eslint": "^9",
     "eslint-config-next": "16.3.2",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wait-on": "^8"
+  },
+  "build": {
+    "appId": "com.bosung.aiddalkkak",
+    "productName": "AI 딸깍 블로그",
+    "asar": true,
+    "files": [
+      "electron/**/*"
+    ],
+    "extraResources": [
+      { "from": ".next/standalone", "to": "standalone" },
+      { "from": ".next/static", "to": "standalone/.next/static" },
+      { "from": "public", "to": "standalone/public" }
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "directories": {
+      "output": "release"
+    }
   }
 }

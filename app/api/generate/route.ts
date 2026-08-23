@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { getAnthropicClient, MODEL_ID } from "@/lib/anthropic";
+import { getAnthropicClient, getModel } from "@/lib/anthropic";
+import { getApiKey } from "@/lib/config";
 import { getSystemPrompt } from "@/lib/systemPrompt";
 import { CONTENT_PACKAGE_TOOL } from "@/lib/contentSchema";
 import { ACTION_INSTRUCTIONS } from "@/lib/actions";
@@ -71,9 +72,9 @@ function buildUserMessage(body: GenerateRequestBody): string {
 }
 
 export async function POST(req: NextRequest) {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!getApiKey()) {
     return NextResponse.json(
-      { error: "서버에 API 키가 설정되지 않았습니다. 관리자에게 문의하세요." },
+      { error: "API 키가 설정되지 않았습니다. 오른쪽 위 '설정'에서 API 키를 입력해주세요." },
       { status: 500 },
     );
   }
@@ -118,7 +119,7 @@ export async function POST(req: NextRequest) {
   try {
     const anthropic = getAnthropicClient();
     const response = await anthropic.messages.create({
-      model: MODEL_ID,
+      model: getModel(),
       max_tokens: 8192,
       system: getSystemPrompt(),
       tools: [CONTENT_PACKAGE_TOOL],
@@ -141,7 +142,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     if (error instanceof Anthropic.AuthenticationError) {
       return NextResponse.json(
-        { error: "API 인증에 실패했습니다. 서버 설정을 확인하세요." },
+        { error: "API 인증에 실패했습니다. '설정'에서 API 키가 올바른지 확인해주세요." },
         { status: 500 },
       );
     }

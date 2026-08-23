@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Plain CommonJS Node script run directly by Electron, outside the
+    // Next.js app — not part of the TS/React lint surface.
+    "electron/**",
+    "release/**",
   ]),
 ]);
 
