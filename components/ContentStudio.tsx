@@ -6,14 +6,14 @@ import ActionBar from "@/components/ActionBar";
 import ResultPackage from "@/components/ResultPackage";
 import CustomPromptManager from "@/components/CustomPromptManager";
 import SettingsModal from "@/components/SettingsModal";
-import type { Category, ContentPackage, GenerateAction, Tone } from "@/lib/types";
+import { CATEGORIES } from "@/lib/categories";
+import type { GenerateAction, HomepanPost } from "@/lib/types";
 
 export default function ContentStudio() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [keyword, setKeyword] = useState("");
-  const [category, setCategory] = useState<Category>("생활");
-  const [tone, setTone] = useState<Tone>("정보형");
-  const [pkg, setPkg] = useState<ContentPackage | null>(null);
+  const [categoryId, setCategoryId] = useState(CATEGORIES[0].id);
+  const [pkg, setPkg] = useState<HomepanPost | null>(null);
   const [loadingAction, setLoadingAction] = useState<GenerateAction | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [customPromptContents, setCustomPromptContents] = useState<string[]>([]);
@@ -22,7 +22,7 @@ export default function ContentStudio() {
 
   async function runAction(action: GenerateAction) {
     if (!keyword.trim()) {
-      setErrorMsg("키워드를 먼저 입력해주세요.");
+      setErrorMsg("주제어를 먼저 입력해주세요.");
       return;
     }
     setErrorMsg(null);
@@ -34,8 +34,7 @@ export default function ContentStudio() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           keyword: keyword.trim(),
-          category,
-          tone,
+          categoryId,
           action,
           current: pkg ?? undefined,
           customPrompts: customPromptContents,
@@ -47,7 +46,7 @@ export default function ContentStudio() {
         setErrorMsg(data.error ?? "콘텐츠 생성 중 오류가 발생했습니다.");
         return;
       }
-      setPkg(data.package as ContentPackage);
+      setPkg(data.post as HomepanPost);
     } catch {
       setErrorMsg("네트워크 오류로 콘텐츠를 받지 못했습니다. 잠시 후 다시 시도해주세요.");
     } finally {
@@ -74,10 +73,10 @@ export default function ContentStudio() {
           AI 딸깍 블로그
         </span>
         <h1 className="text-2xl font-bold text-zinc-900 sm:text-3xl">
-          키워드 하나로 홈판용 글 완성
+          주제어 하나로 홈판용 글 완성
         </h1>
         <p className="mt-2 text-sm text-zinc-500 sm:text-base">
-          제목부터 본문, 이미지 프롬프트, 해시태그까지 AI가 한 번에 만들어드립니다.
+          실시간 검색과 팩트체크를 거쳐, 바로 붙여넣을 수 있는 완성글과 대표 썸네일 프롬프트를 만들어드립니다.
         </p>
       </header>
 
@@ -85,12 +84,10 @@ export default function ContentStudio() {
 
       <GeneratorForm
         keyword={keyword}
-        category={category}
-        tone={tone}
+        categoryId={categoryId}
         loading={loading}
         onKeywordChange={setKeyword}
-        onCategoryChange={setCategory}
-        onToneChange={setTone}
+        onCategoryChange={setCategoryId}
         onSubmit={() => runAction("generate")}
       />
 
@@ -106,7 +103,7 @@ export default function ContentStudio() {
         <div className="flex flex-col items-center gap-3 rounded-3xl border border-black/8 bg-white p-10 text-center shadow-sm">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#03C75A]/20 border-t-[#03C75A]" />
           <p className="text-sm text-zinc-500">
-            AI가 홈판용 콘텐츠를 기획하고 있어요. 잠시만 기다려주세요...
+            AI가 실시간으로 자료를 찾고 글을 쓰는 중이에요. 최대 1~2분 정도 걸릴 수 있어요...
           </p>
         </div>
       )}

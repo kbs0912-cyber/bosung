@@ -1,71 +1,23 @@
-export type Category =
-  | "자동차"
-  | "IT"
-  | "생활"
-  | "여행"
-  | "맛집"
-  | "재테크"
-  | "건강"
-  | "쇼핑"
-  | "기타";
-
-export type Tone =
-  | "정보형"
-  | "후기형"
-  | "비교형"
-  | "뉴스형"
-  | "추천형"
-  | "궁금증 유발형";
-
-export const CATEGORIES: Category[] = [
-  "자동차",
-  "IT",
-  "생활",
-  "여행",
-  "맛집",
-  "재테크",
-  "건강",
-  "쇼핑",
-  "기타",
-];
-
-export const TONES: Tone[] = [
-  "정보형",
-  "후기형",
-  "비교형",
-  "뉴스형",
-  "추천형",
-  "궁금증 유발형",
-];
-
-export interface ImagePlan {
-  index: number;
-  position: string;
-  description: string;
-  prompt: string;
-}
-
-export interface ContentPackage {
-  titles: string[];
-  thumbnailPhrases: string[];
-  body: string;
-  images: ImagePlan[];
-  hashtags: string[];
-  homeClickPoints: string;
+// Completed post ready to paste into Naver Blog, plus the single main
+// thumbnail prompt (7단계). This is intentionally the *default, collapsed*
+// output of the 0~7단계 category guides in prompts/*.md — sub-thumbnails,
+// the 6단계 실사 이미지 프롬프트, and the raw 30-title list are generated
+// internally by the model but never surfaced.
+export interface HomepanPost {
+  title: string;
+  post: string;
+  mainThumbnailPrompt: string;
 }
 
 export type GenerateAction =
   | "generate"
-  | "regenerate_titles"
-  | "regenerate_body"
+  | "regenerate_all"
   | "more_provocative"
   | "more_professional"
   | "more_natural"
   | "shorten"
   | "lengthen"
-  | "generate_images"
-  | "generate_hashtags"
-  | "regenerate_all";
+  | "regenerate_thumbnail";
 
 export interface CustomPrompt {
   id: string;
@@ -79,9 +31,8 @@ export const MAX_CUSTOM_PROMPT_LENGTH = 4000;
 
 export interface GenerateRequestBody {
   keyword: string;
-  category: Category;
-  tone: Tone;
+  categoryId: string;
   action: GenerateAction;
-  current?: ContentPackage;
+  current?: HomepanPost;
   customPrompts?: string[];
 }

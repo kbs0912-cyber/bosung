@@ -2,45 +2,39 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { getAnthropicClient, getModel } from "@/lib/anthropic";
 import { getApiKey } from "@/lib/config";
-import { getSystemPrompt } from "@/lib/systemPrompt";
-import { CONTENT_PACKAGE_TOOL } from "@/lib/contentSchema";
+import { getCategorySystemPrompt } from "@/lib/systemPrompt";
+import { OUTPUT_POST_TOOL, WEB_SEARCH_TOOL } from "@/lib/contentSchema";
 import { ACTION_INSTRUCTIONS } from "@/lib/actions";
+import { findCategory } from "@/lib/categories";
 import {
-  CATEGORIES,
   MAX_CUSTOM_PROMPTS,
   MAX_CUSTOM_PROMPT_LENGTH,
-  TONES,
-  type ContentPackage,
+  type HomepanPost,
   type GenerateAction,
   type GenerateRequestBody,
 } from "@/lib/types";
 
 export const runtime = "nodejs"; // needs fs — do not use edge runtime
+export const maxDuration = 300; // web search can chain several rounds before the final tool call
 
 const VALID_ACTIONS: GenerateAction[] = [
   "generate",
-  "regenerate_titles",
-  "regenerate_body",
+  "regenerate_all",
   "more_provocative",
   "more_professional",
   "more_natural",
   "shorten",
   "lengthen",
-  "generate_images",
-  "generate_hashtags",
-  "regenerate_all",
+  "regenerate_thumbnail",
 ];
 
-function isContentPackage(value: unknown): value is ContentPackage {
+function isHomepanPost(value: unknown): value is HomepanPost {
   if (!value || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
   return (
-    Array.isArray(v.titles) &&
-    Array.isArray(v.thumbnailPhrases) &&
-    typeof v.body === "string" &&
-    Array.isArray(v.images) &&
-    Array.isArray(v.hashtags) &&
-    typeof v.homeClickPoints === "string"
+    typeof v.title === "string" &&
+    typeof v.post === "string" &&
+    typeof v.mainThumbnailPrompt === "string"
   );
 }
 
@@ -54,7 +48,7 @@ function sanitizeCustomPrompts(value: unknown): string[] {
 
 function buildUserMessage(body: GenerateRequestBody): string {
   const instruction = ACTION_INSTRUCTIONS[body.action];
-  const conditions = `키워드: ${body.keyword}\n카테고리: ${body.category}\n글 분위기: ${body.tone}`;
+  const conditions = `주제어: ${body.keyword}`;
   const customPromptsBlock =
     body.customPrompts && body.customPrompts.length > 0
       ? `\n\n[사용자 커스텀 프롬프트]\n${body.customPrompts
@@ -62,11 +56,11 @@ function buildUserMessage(body: GenerateRequestBody): string {
           .join("\n")}`
       : "";
 
-  if (body.action === "generate" || !body.current) {
+  if (body.action === "generate" || body.action === "regenerate_all" || !body.current) {
     return `${conditions}${customPromptsBlock}\n\n요청: ${instruction}`;
   }
 
-  return `${conditions}${customPromptsBlock}\n\n기존 콘텐츠 패키지 (JSON):\n${JSON.stringify(
+  return `${conditions}${customPromptsBlock}\n\n기존 결과 (JSON):\n${JSON.stringify(
     body.current,
   )}\n\n요청: ${instruction}`;
 }
@@ -86,33 +80,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "잘못된 요청 형식입니다." }, { status: 400 });
   }
 
-  const { keyword, category, tone, action, current, customPrompts } = body;
+  const { keyword, categoryId, action, current, customPrompts } = body;
 
   if (typeof keyword !== "string" || !keyword.trim()) {
-    return NextResponse.json({ error: "키워드를 입력해주세요." }, { status: 400 });
+    return NextResponse.json({ error: "주제어를 입력해주세요." }, { status: 400 });
   }
-  if (!category || !CATEGORIES.includes(category)) {
+  const category = typeof categoryId === "string" ? findCategory(categoryId) : undefined;
+  if (!category) {
     return NextResponse.json({ error: "카테고리를 선택해주세요." }, { status: 400 });
-  }
-  if (!tone || !TONES.includes(tone)) {
-    return NextResponse.json({ error: "글 분위기를 선택해주세요." }, { status: 400 });
   }
   if (!action || !VALID_ACTIONS.includes(action)) {
     return NextResponse.json({ error: "알 수 없는 요청입니다." }, { status: 400 });
   }
-  if (action !== "generate" && action !== "regenerate_all" && !isContentPackage(current)) {
+  if (action !== "generate" && action !== "regenerate_all" && !isHomepanPost(current)) {
     return NextResponse.json(
-      { error: "수정할 기존 콘텐츠가 없습니다. 먼저 콘텐츠를 생성해주세요." },
+      { error: "수정할 기존 결과가 없습니다. 먼저 콘텐츠를 생성해주세요." },
       { status: 400 },
     );
   }
 
   const requestBody: GenerateRequestBody = {
     keyword: keyword.trim(),
-    category,
-    tone,
+    categoryId: category.id,
     action,
-    current: isContentPackage(current) ? current : undefined,
+    current: isHomepanPost(current) ? current : undefined,
     customPrompts: sanitizeCustomPrompts(customPrompts),
   };
 
@@ -120,25 +111,28 @@ export async function POST(req: NextRequest) {
     const anthropic = getAnthropicClient();
     const response = await anthropic.messages.create({
       model: getModel(),
-      max_tokens: 8192,
-      system: getSystemPrompt(),
-      tools: [CONTENT_PACKAGE_TOOL],
-      tool_choice: { type: "tool", name: CONTENT_PACKAGE_TOOL.name },
+      max_tokens: 16000,
+      system: getCategorySystemPrompt(category.promptFile),
+      tools: [WEB_SEARCH_TOOL, OUTPUT_POST_TOOL],
+      tool_choice: { type: "auto" },
       messages: [{ role: "user", content: buildUserMessage(requestBody) }],
     });
 
-    const toolUseBlock = response.content.find(
-      (b): b is Anthropic.ToolUseBlock => b.type === "tool_use",
-    );
+    const toolUseBlock = [...response.content]
+      .reverse()
+      .find(
+        (b): b is Anthropic.ToolUseBlock =>
+          b.type === "tool_use" && b.name === OUTPUT_POST_TOOL.name,
+      );
 
-    if (!toolUseBlock || !isContentPackage(toolUseBlock.input)) {
+    if (!toolUseBlock || !isHomepanPost(toolUseBlock.input)) {
       return NextResponse.json(
         { error: "AI 응답을 해석하지 못했습니다. 다시 시도해주세요." },
         { status: 502 },
       );
     }
 
-    return NextResponse.json({ package: toolUseBlock.input as ContentPackage });
+    return NextResponse.json({ post: toolUseBlock.input as HomepanPost });
   } catch (error) {
     if (error instanceof Anthropic.AuthenticationError) {
       return NextResponse.json(

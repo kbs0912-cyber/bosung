@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
-    "/api/generate": ["./system_prompt.md"],
+    "/api/generate": ["./prompts/*.md"],
   },
   // Only enabled for the Electron (Windows app) build — a standalone bundle
   // lets electron/main.js spawn the server with `node server.js` without a
