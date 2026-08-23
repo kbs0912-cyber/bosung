@@ -7,7 +7,8 @@ import ResultPackage from "@/components/ResultPackage";
 import CustomPromptManager from "@/components/CustomPromptManager";
 import SettingsModal from "@/components/SettingsModal";
 import LoadingStatus from "@/components/LoadingStatus";
-import { CATEGORIES } from "@/lib/categories";
+import TrendImportPanel from "@/components/TrendImportPanel";
+import { CATEGORIES, findCategory } from "@/lib/categories";
 import type { GenerateAction, HomepanPost } from "@/lib/types";
 
 export default function ContentStudio() {
@@ -97,6 +98,13 @@ export default function ContentStudio() {
     setImageError(null);
   }
 
+  function handlePickTrendKeyword(kw: string, suggestedCategoryId?: string) {
+    setKeyword(kw);
+    if (suggestedCategoryId && findCategory(suggestedCategoryId)) {
+      setCategoryId(suggestedCategoryId);
+    }
+  }
+
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 pb-16 pt-10 sm:px-6">
       <header className="relative text-center">
@@ -119,6 +127,8 @@ export default function ContentStudio() {
       </header>
 
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+
+      <TrendImportPanel onPick={handlePickTrendKeyword} />
 
       <GeneratorForm
         keyword={keyword}
