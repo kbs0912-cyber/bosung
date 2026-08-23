@@ -67,10 +67,21 @@ export type GenerateAction =
   | "generate_hashtags"
   | "regenerate_all";
 
+export interface CustomPrompt {
+  id: string;
+  title: string;
+  content: string;
+  enabled: boolean;
+}
+
+export const MAX_CUSTOM_PROMPTS = 20;
+export const MAX_CUSTOM_PROMPT_LENGTH = 4000;
+
 export interface GenerateRequestBody {
   keyword: string;
   category: Category;
   tone: Tone;
   action: GenerateAction;
   current?: ContentPackage;
+  customPrompts?: string[];
 }

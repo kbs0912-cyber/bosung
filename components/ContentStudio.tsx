@@ -4,6 +4,7 @@ import { useState } from "react";
 import GeneratorForm from "@/components/GeneratorForm";
 import ActionBar from "@/components/ActionBar";
 import ResultPackage from "@/components/ResultPackage";
+import CustomPromptManager from "@/components/CustomPromptManager";
 import type { Category, ContentPackage, GenerateAction, Tone } from "@/lib/types";
 
 export default function ContentStudio() {
@@ -13,6 +14,7 @@ export default function ContentStudio() {
   const [pkg, setPkg] = useState<ContentPackage | null>(null);
   const [loadingAction, setLoadingAction] = useState<GenerateAction | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [customPromptContents, setCustomPromptContents] = useState<string[]>([]);
 
   const loading = loadingAction !== null;
 
@@ -34,6 +36,7 @@ export default function ContentStudio() {
           tone,
           action,
           current: pkg ?? undefined,
+          customPrompts: customPromptContents,
         }),
       });
       const data = await res.json();
@@ -79,6 +82,8 @@ export default function ContentStudio() {
         onToneChange={setTone}
         onSubmit={() => runAction("generate")}
       />
+
+      <CustomPromptManager onChange={setCustomPromptContents} />
 
       {errorMsg && (
         <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">

@@ -6,6 +6,8 @@ import { CONTENT_PACKAGE_TOOL } from "@/lib/contentSchema";
 import { ACTION_INSTRUCTIONS } from "@/lib/actions";
 import {
   CATEGORIES,
+  MAX_CUSTOM_PROMPTS,
+  MAX_CUSTOM_PROMPT_LENGTH,
   TONES,
   type ContentPackage,
   type GenerateAction,
@@ -41,15 +43,29 @@ function isContentPackage(value: unknown): value is ContentPackage {
   );
 }
 
+function sanitizeCustomPrompts(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+    .slice(0, MAX_CUSTOM_PROMPTS)
+    .map((v) => v.trim().slice(0, MAX_CUSTOM_PROMPT_LENGTH));
+}
+
 function buildUserMessage(body: GenerateRequestBody): string {
   const instruction = ACTION_INSTRUCTIONS[body.action];
   const conditions = `키워드: ${body.keyword}\n카테고리: ${body.category}\n글 분위기: ${body.tone}`;
+  const customPromptsBlock =
+    body.customPrompts && body.customPrompts.length > 0
+      ? `\n\n[사용자 커스텀 프롬프트]\n${body.customPrompts
+          .map((p, i) => `${i + 1}. ${p}`)
+          .join("\n")}`
+      : "";
 
   if (body.action === "generate" || !body.current) {
-    return `${conditions}\n\n요청: ${instruction}`;
+    return `${conditions}${customPromptsBlock}\n\n요청: ${instruction}`;
   }
 
-  return `${conditions}\n\n기존 콘텐츠 패키지 (JSON):\n${JSON.stringify(
+  return `${conditions}${customPromptsBlock}\n\n기존 콘텐츠 패키지 (JSON):\n${JSON.stringify(
     body.current,
   )}\n\n요청: ${instruction}`;
 }
@@ -69,7 +85,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "잘못된 요청 형식입니다." }, { status: 400 });
   }
 
-  const { keyword, category, tone, action, current } = body;
+  const { keyword, category, tone, action, current, customPrompts } = body;
 
   if (typeof keyword !== "string" || !keyword.trim()) {
     return NextResponse.json({ error: "키워드를 입력해주세요." }, { status: 400 });
@@ -96,6 +112,7 @@ export async function POST(req: NextRequest) {
     tone,
     action,
     current: isContentPackage(current) ? current : undefined,
+    customPrompts: sanitizeCustomPrompts(customPrompts),
   };
 
   try {
