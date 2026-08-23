@@ -10,15 +10,6 @@ import LoadingStatus from "@/components/LoadingStatus";
 import { CATEGORIES } from "@/lib/categories";
 import type { GenerateAction, HomepanPost } from "@/lib/types";
 
-// Actions whose result carries a new 메인 썸네일 프롬프트 — only these should
-// trigger a fresh image generation. Tone/length tweaks keep the same prompt
-// (see lib/actions.ts), so the existing image stays valid.
-const THUMBNAIL_CHANGING_ACTIONS: GenerateAction[] = [
-  "generate",
-  "regenerate_all",
-  "regenerate_thumbnail",
-];
-
 export default function ContentStudio() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [keyword, setKeyword] = useState("");
@@ -86,9 +77,12 @@ export default function ContentStudio() {
       }
       const post = data.post as HomepanPost;
       setPkg(post);
-      if (THUMBNAIL_CHANGING_ACTIONS.includes(action)) {
-        void generateImage(post.mainThumbnailPrompt);
-      }
+      // Thumbnail images are no longer generated automatically — Gemini is a
+      // separate paid API from Claude, so an auto-fired call on every
+      // generation risked silent failures/cost on accounts without billing
+      // set up. Generating one is now an explicit action (see ResultPackage).
+      setThumbnailImage(null);
+      setImageError(null);
     } catch {
       setErrorMsg("네트워크 오류로 콘텐츠를 받지 못했습니다. 잠시 후 다시 시도해주세요.");
     } finally {
@@ -120,7 +114,7 @@ export default function ContentStudio() {
           주제어 하나로 홈판용 글 완성
         </h1>
         <p className="mt-2 text-sm text-zinc-500 sm:text-base">
-          실시간 검색과 팩트체크를 거쳐, 바로 붙여넣을 수 있는 완성글과 대표 썸네일 이미지를 만들어드립니다.
+          실시간 검색과 팩트체크를 거쳐, 바로 붙여넣을 수 있는 완성글과 대표 썸네일 프롬프트를 만들어드립니다.
         </p>
       </header>
 

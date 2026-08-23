@@ -53,9 +53,19 @@ export default function ResultPackage({
       </Card>
 
       <Card
-        title="메인 썸네일"
+        title="메인 썸네일 프롬프트"
         action={<CopyButton text={pkg.mainThumbnailPrompt} label="프롬프트 복사" />}
       >
+        {!imageLoading && !thumbnailImage && !imageError && (
+          <button
+            type="button"
+            onClick={onRegenerateImage}
+            className="mb-3 w-full rounded-xl border border-dashed border-black/15 py-3 text-xs font-medium text-zinc-500 transition hover:border-[#03C75A]/40 hover:bg-[#03C75A]/5 hover:text-[#03C75A]"
+          >
+            이 프롬프트로 Gemini 이미지 만들어보기 (별도 Google 비용 발생 가능)
+          </button>
+        )}
+
         {imageLoading && (
           <div className="flex flex-col items-center gap-2 rounded-xl bg-zinc-50 p-8 text-center">
             <div className="h-6 w-6 animate-spin rounded-full border-4 border-[#03C75A]/20 border-t-[#03C75A]" />
