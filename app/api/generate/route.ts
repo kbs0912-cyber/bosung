@@ -112,6 +112,10 @@ export async function POST(req: NextRequest) {
     const response = await anthropic.messages.create({
       model: getModel(),
       max_tokens: 16000,
+      // Medium effort trims reasoning depth (and wall-clock time) — this
+      // task is writing a blog post, not solving a hard problem, so the
+      // default "high" effort mostly adds latency without adding quality.
+      output_config: { effort: "medium" },
       // Cached: the per-category guide is 5~7만자 and byte-identical across
       // every action (제목 다시 만들기, 톤 조절, ...) within a category, so
       // caching it cuts repeat-click cost drastically (~90% off cached

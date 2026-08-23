@@ -6,6 +6,7 @@ import ActionBar from "@/components/ActionBar";
 import ResultPackage from "@/components/ResultPackage";
 import CustomPromptManager from "@/components/CustomPromptManager";
 import SettingsModal from "@/components/SettingsModal";
+import LoadingStatus from "@/components/LoadingStatus";
 import { CATEGORIES } from "@/lib/categories";
 import type { GenerateAction, HomepanPost } from "@/lib/types";
 
@@ -142,14 +143,7 @@ export default function ContentStudio() {
         </div>
       )}
 
-      {loading && !pkg && (
-        <div className="flex flex-col items-center gap-3 rounded-3xl border border-black/8 bg-white p-10 text-center shadow-sm">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#03C75A]/20 border-t-[#03C75A]" />
-          <p className="text-sm text-zinc-500">
-            AI가 실시간으로 자료를 찾고 글을 쓰는 중이에요. 최대 1~2분 정도 걸릴 수 있어요...
-          </p>
-        </div>
-      )}
+      {loading && !pkg && <LoadingStatus />}
 
       {pkg && (
         <>
