@@ -153,6 +153,7 @@ export async function POST(req: NextRequest) {
       );
     }
     if (error instanceof Anthropic.APIError) {
+      console.error("[api/generate] Anthropic APIError:", error.status, error.message);
       if (error.status === 400 && /credit balance/i.test(error.message)) {
         return NextResponse.json(
           { error: "Anthropic 계정의 크레딧 잔액이 부족합니다. Plans & Billing에서 충전 후 다시 시도해주세요." },
@@ -160,12 +161,15 @@ export async function POST(req: NextRequest) {
         );
       }
       return NextResponse.json(
-        { error: "AI 콘텐츠 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요." },
+        {
+          error: `AI 콘텐츠 생성 중 오류가 발생했습니다. (${error.status}) ${error.message}`,
+        },
         { status: 502 },
       );
     }
+    console.error("[api/generate] Unexpected error:", error);
     return NextResponse.json(
-      { error: "알 수 없는 오류가 발생했습니다." },
+      { error: "알 수 없는 오류가 발생했습니다. 터미널 창에 표시된 오류 내용을 확인해주세요." },
       { status: 500 },
     );
   }
