@@ -1,5 +1,9 @@
-import ChatWindow from "@/components/ChatWindow";
+import ContentStudio from "@/components/ContentStudio";
 
 export default function Home() {
-  return <ChatWindow />;
+  return (
+    <main className="min-h-screen bg-zinc-50">
+      <ContentStudio />
+    </main>
+  );
 }
