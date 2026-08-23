@@ -121,12 +121,15 @@ export async function POST(req: NextRequest) {
       // Cached: the per-category guide is 5~7만자 and byte-identical across
       // every action (제목 다시 만들기, 톤 조절, ...) within a category, so
       // caching it cuts repeat-click cost drastically (~90% off cached
-      // input tokens instead of full price every time).
+      // input tokens instead of full price every time). 1h TTL instead of
+      // the 5-min default — a session writing several posts in one sitting
+      // (reading/tweaking each one takes longer than 5 min) would otherwise
+      // keep losing the warm cache and paying the write premium again.
       system: [
         {
           type: "text",
           text: getCategorySystemPrompt(category.promptFile),
-          cache_control: { type: "ephemeral" },
+          cache_control: { type: "ephemeral", ttl: "1h" },
         },
       ],
       tools: [WEB_SEARCH_TOOL, OUTPUT_POST_TOOL],
